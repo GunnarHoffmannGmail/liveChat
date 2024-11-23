@@ -49,7 +49,7 @@ def process_input(text):
     )
     return response.choices[0].text.strip()
 
-# Function to convert text to speech
+# Function to convert text to speech1
 def text_to_speech(text):
     tts = gTTS(text=text, lang='en')
     tts.save("response.mp3")
