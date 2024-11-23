@@ -3,23 +3,30 @@ import openai
 import speech_recognition as sr
 from gtts import gTTS
 import os
-import sounddevice as sd
-import wavio
+from pydub import AudioSegment
+from pydub.playback import play
+from pydub.generators import Sine
+import tempfile
 
 # Set up OpenAI API key
 openai.api_key = 'YOUR_OPENAI_API_KEY'
 
-# Function to recognize speech using sounddevice
+# Function to recognize speech using pydub
 def recognize_speech():
     recognizer = sr.Recognizer()
     duration = 5  # seconds
     fs = 44100  # Sample rate
     st.write("Listening...")
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
-    sd.wait()  # Wait until recording is finished
-    wavio.write("output.wav", recording, fs, sampwidth=2)
-    
-    with sr.AudioFile("output.wav") as source:
+
+    # Generate a silent audio segment
+    silent_segment = Sine(0).to_audio_segment(duration=duration * 1000)
+
+    # Save the silent audio segment to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio_file:
+        silent_segment.export(temp_audio_file.name, format="wav")
+        temp_audio_file_path = temp_audio_file.name
+
+    with sr.AudioFile(temp_audio_file_path) as source:
         audio = recognizer.record(source)
     try:
         text = recognizer.recognize_google(audio)
@@ -45,7 +52,8 @@ def process_input(text):
 def text_to_speech(text):
     tts = gTTS(text=text, lang='en')
     tts.save("response.mp3")
-    os.system("mpg321 response.mp3")
+    response_audio = AudioSegment.from_mp3("response.mp3")
+    play(response_audio)
 
 # Streamlit app layout
 st.title("Welcome to My Streamlit App")
