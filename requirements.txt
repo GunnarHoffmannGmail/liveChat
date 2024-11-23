@@ -3,3 +3,4 @@ openai
 SpeechRecognition
 gtts
 sounddevice
+wavio
