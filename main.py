@@ -1,6 +1,12 @@
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, ClientSettings
 import speech_recognition as sr
+import openai
+from gtts import gTTS
+import os
+
+# Set up OpenAI API key
+openai.api_key = 'YOUR_OPENAI_API_KEY'
 
 # WebRTC client settings to ensure the dialog box remains
 WEBRTC_CLIENT_SETTINGS = ClientSettings(
@@ -26,10 +32,28 @@ class SpeechRecognitionProcessor(AudioProcessorBase):
             text = self.recognizer.recognize_google(audio)
             if text:
                 st.write(f"Recognized: {text}")
+                response = process_input(text)
+                st.write(f"Response: {response}")
+                text_to_speech(response)
         except sr.UnknownValueError:
             st.write("Listening...")
         except sr.RequestError:
             st.write("Sorry, my speech service is down.")
+
+# Function to process input using OpenAI GPT-3
+def process_input(text):
+    response = openai.Completion.create(
+        engine="davinci",
+        prompt=text,
+        max_tokens=150
+    )
+    return response.choices[0].text.strip()
+
+# Function to convert text to speech
+def text_to_speech(text):
+    tts = gTTS(text=text, lang='en')
+    tts.save("response.mp3")
+    os.system("mpg321 response.mp3")
 
 # Streamlit app layout
 st.title("Live Chat Mode with Speech Recognition")
