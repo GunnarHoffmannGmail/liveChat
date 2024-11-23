@@ -3,7 +3,7 @@ import openai
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 import speech_recognition as sr
 
-# Set up OpenAI API key
+# Set up OpenAI API key1
 openai.api_key = 'YOUR_OPENAI_API_KEY'
 
 # Custom audio processor for speech recognition
