@@ -56,7 +56,7 @@ def text_to_speech(text):
     os.system("mpg321 response.mp3")
 
 # Streamlit app layout
-st.title("Live Chat Mode with Speech Recognition")
+st.title("Live Chat1 Mode with Speech Recognition")
 st.subheader("This app listens to live speech and displays recognized text in real-time.")
 
 if st.button("Start Live Chat Listening"):
