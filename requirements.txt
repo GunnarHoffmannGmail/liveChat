@@ -4,4 +4,3 @@ SpeechRecognition
 gtts
 sounddevice
 wavio
-pyaudio
