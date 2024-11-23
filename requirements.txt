@@ -1,6 +1,5 @@
 streamlit
 openai
 SpeechRecognition
-gtts
 sounddevice
-wavio
+numpy

@@ -1,36 +1,40 @@
 import streamlit as st
 import openai
 import speech_recognition as sr
-from gtts import gTTS
-import os
 import sounddevice as sd
-import wavio
+import queue
+import threading
 
 # Set up OpenAI API key
 openai.api_key = 'YOUR_OPENAI_API_KEY'
 
-# Function to recognize speech using sounddevice
-def recognize_speech():
+# Function to recognize speech in real-time
+def recognize_speech_live():
     recognizer = sr.Recognizer()
-    duration = 5  # seconds
-    fs = 44100  # Sample rate
-    st.write("Listening...")
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
-    sd.wait()  # Wait until recording is finished
-    wavio.write("output.wav", recording, fs, sampwidth=2)
-    
-    with sr.AudioFile("output.wav") as source:
-        audio = recognizer.record(source)
-    try:
-        text = recognizer.recognize_google(audio)
-        st.write(f"You said: {text}")
-        return text
-    except sr.UnknownValueError:
-        st.write("Sorry, I did not understand that.")
-        return ""
-    except sr.RequestError:
-        st.write("Sorry, my speech service is down.")
-        return ""
+    q = queue.Queue()
+
+    def callback(indata, frames, time, status):
+        if status:
+            st.write(status)
+        q.put(bytes(indata))
+
+    with sr.Microphone() as source:
+        st.write("Listening in live chat mode...")
+        audio_stream = sd.InputStream(samplerate=16000, channels=1, callback=callback)
+        with audio_stream:
+            while True:
+                audio_data = q.get()
+                try:
+                    audio = sr.AudioData(audio_data, 16000, 2)
+                    text = recognizer.recognize_google(audio)
+                    if text:
+                        st.write(f"Recognized: {text}")
+                        yield text
+                except sr.UnknownValueError:
+                    st.write("Listening...")
+                except sr.RequestError:
+                    st.write("Sorry, my speech service is down.")
+                    break
 
 # Function to process input using OpenAI GPT-3
 def process_input(text):
@@ -41,49 +45,11 @@ def process_input(text):
     )
     return response.choices[0].text.strip()
 
-# Function to convert text to speech
-def text_to_speech(text):
-    tts = gTTS(text=text, lang='en')
-    tts.save("response.mp3")
-    os.system("mpg321 response.mp3")
-
 # Streamlit app layout
-st.title("Welcome to My Streamlit App")
-st.subheader("A simple app to demonstrate Streamlit features")
-st.markdown("### Hello, World!")
-st.markdown("---")
+st.title("Live Chat Mode with Speech Recognition")
+st.subheader("This app listens to live speech and displays recognized text in real-time.")
 
-# Create two columns
-col1, col2 = st.columns(2)
-
-# Add an input box for an integer in the first column
-with col1:
-    st.markdown("#### Input Section")
-    number = st.number_input("Enter an integer", min_value=0, max_value=100, value=0)
-
-# Display the entered number in the second column
-with col2:
-    st.markdown("#### Output Section")
-    st.write(f"You entered: {number}")
-
-# Add an image
-st.image("https://via.placeholder.com/800x200.png?text=Streamlit+App", use_column_width=True)
-
-# Add a horizontal line
-st.markdown("---")
-
-# Voice assistant section
-st.markdown("### Voice Assistant Chatbot")
-st.write("Press the button and start speaking...")
-
-if st.button("Start Listening"):
-    user_input = recognize_speech()
-    if user_input:
-        response = process_input(user_input)
+if st.button("Start Live Chat Listening"):
+    for recognized_text in recognize_speech_live():
+        response = process_input(recognized_text)
         st.write(f"Response: {response}")
-        text_to_speech(response)
-
-# Add a footer with a link
-st.markdown("---")
-st.markdown("**Thank you for using the app!**")
-st.markdown("[Learn more about Streamlit](https://streamlit.io)")
