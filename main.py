@@ -3,17 +3,24 @@ import openai
 import speech_recognition as sr
 from gtts import gTTS
 import os
+import sounddevice as sd
+import wavio
 
 # Set up OpenAI API key
 openai.api_key = 'YOUR_OPENAI_API_KEY'
 
-# Function to recognize speech
+# Function to recognize speech using sounddevice
 def recognize_speech():
     recognizer = sr.Recognizer()
-    mic = sr.Microphone()
-    with mic as source:
-        st.write("Listening...")
-        audio = recognizer.listen(source)
+    duration = 5  # seconds
+    fs = 44100  # Sample rate
+    st.write("Listening...")
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
+    sd.wait()  # Wait until recording is finished
+    wavio.write("output.wav", recording, fs, sampwidth=2)
+    
+    with sr.AudioFile("output.wav") as source:
+        audio = recognizer.record(source)
     try:
         text = recognizer.recognize_google(audio)
         st.write(f"You said: {text}")
