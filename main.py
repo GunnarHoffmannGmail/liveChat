@@ -5,8 +5,8 @@ import openai
 from gtts import gTTS
 import os
 
-# Set up OpenAI API key
-openai.api_key = 'YOUR_OPENAI_API_KEY'
+# Set up OpenAI API key from Streamlit secrets
+openai.api_key = st.secrets["openai"]["api_key"]
 
 # WebRTC client settings to ensure the dialog box remains
 WEBRTC_CLIENT_SETTINGS = ClientSettings(
@@ -49,14 +49,14 @@ def process_input(text):
     )
     return response.choices[0].text.strip()
 
-# Function to convert text to speech1
+# Function to convert text to speech
 def text_to_speech(text):
     tts = gTTS(text=text, lang='en')
     tts.save("response.mp3")
     os.system("mpg321 response.mp3")
 
 # Streamlit app layout
-st.title("Live Chat1 Mode with Speech Recognition")
+st.title("Live Chat Mode with Speech Recognition")
 st.subheader("This app listens to live speech and displays recognized text in real-time.")
 
 if st.button("Start Live Chat Listening"):
