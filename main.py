@@ -38,9 +38,16 @@ def main():
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     const base64AudioMessage = reader.result.split(',')[1];
-                    const audioInput = document.getElementById("audioInput");
-                    audioInput.value = base64AudioMessage;
-                    audioInput.dispatchEvent(new Event('change'));
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = 'data:text/plain;base64,' + base64AudioMessage;
+                    document.body.appendChild(iframe);
+                    iframe.onload = function() {
+                        setTimeout(() => document.body.removeChild(iframe), 1000);
+                    };
+                    const audioInputField = document.getElementById("audioInputHidden");
+                    audioInputField.value = base64AudioMessage;
+                    audioInputField.dispatchEvent(new Event('input'));
                 };
                 document.getElementById("status").innerText = "Recording stopped.";
             };
@@ -49,22 +56,11 @@ def main():
     <button onclick="startRecording()">Start Recording</button>
     <button onclick="stopRecording()">Stop Recording</button>
     <p id="status">Press start to begin recording.</p>
-    <input type="hidden" id="audioInput" onchange="sendAudioToStreamlit()">
-    <script>
-        function sendAudioToStreamlit() {
-            const audioValue = document.getElementById("audioInput").value;
-            if (audioValue) {
-                const audioInputField = document.getElementById("audioInputHidden");
-                audioInputField.value = audioValue;
-                audioInputField.dispatchEvent(new Event('input'));
-            }
-        }
-    </script>
     <input type="hidden" id="audioInputHidden">
     """
 
     # Embed HTML5 Audio Recorder
-    audio_data = html(audio_recorder_html)
+    html(audio_recorder_html)
 
     # Handle audio data submission
     audio_base64 = st.text_input("", key="audioInputHidden")
@@ -96,4 +92,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
