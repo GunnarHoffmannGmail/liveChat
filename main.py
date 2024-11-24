@@ -4,6 +4,7 @@ import speech_recognition as sr
 import openai
 from gtts import gTTS
 import os
+import numpy as np
 
 # Set up OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["openai"]["api_key"]
@@ -26,7 +27,7 @@ class SpeechRecognitionProcessor(AudioProcessorBase):
         self.text_placeholder = st.empty()
 
     def recv(self, frame):
-        audio_data = frame.to_ndarray()
+        audio_data = np.array(frame.to_ndarray())
         audio = sr.AudioData(audio_data.tobytes(), frame.sample_rate, frame.sample_width)
 
         try:
@@ -36,7 +37,7 @@ class SpeechRecognitionProcessor(AudioProcessorBase):
                 response = process_input(text)
                 st.write(f"Response: {response}")
                 text_to_speech(response)
-                st.text_area("Recognized Text:", value=text, height=100, key="recognized_text")
+                self.text_placeholder.text_area("Recognized Text:", value=text, height=100, key="recognized_text")
         except sr.UnknownValueError:
             self.text_placeholder.text("Listening...")
         except sr.RequestError:
