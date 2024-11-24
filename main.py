@@ -56,7 +56,7 @@ def text_to_speech(text):
     tts.save("response.mp3")
     os.system("mpg321 response.mp3")
 
-# Streamlit app layout
+# Streamlit app layout1
 st.title("Live Chat Mode with Speech Recognition")
 st.subheader("This app listens to live speech and displays recognized text in real-time.")
 
