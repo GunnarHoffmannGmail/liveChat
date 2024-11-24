@@ -23,6 +23,7 @@ WEBRTC_CLIENT_SETTINGS = ClientSettings(
 class SpeechRecognitionProcessor(AudioProcessorBase):
     def __init__(self):
         self.recognizer = sr.Recognizer()
+        self.text_placeholder = st.empty()
 
     def recv(self, frame):
         audio_data = frame.to_ndarray()
@@ -31,14 +32,14 @@ class SpeechRecognitionProcessor(AudioProcessorBase):
         try:
             text = self.recognizer.recognize_google(audio)
             if text:
-                st.write(f"Recognized: {text}")
+                self.text_placeholder.text(f"Recognized: {text}")
                 response = process_input(text)
                 st.write(f"Response: {response}")
                 text_to_speech(response)
         except sr.UnknownValueError:
-            st.write("Listening...")
+            self.text_placeholder.text("Listening...")
         except sr.RequestError:
-            st.write("Sorry, my speech service is down.")
+            self.text_placeholder.text("Sorry, my speech service is down.")
 
 # Function to process input using OpenAI GPT-3
 def process_input(text):
