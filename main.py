@@ -40,7 +40,7 @@ def main():
                     const base64AudioMessage = reader.result.split(',')[1];
                     const audioInput = document.getElementById("audioInput");
                     audioInput.value = base64AudioMessage;
-                    audioInput.dispatchEvent(new Event('input'));
+                    audioInput.dispatchEvent(new Event('change'));
                 };
                 document.getElementById("status").innerText = "Recording stopped.";
             };
@@ -49,7 +49,18 @@ def main():
     <button onclick="startRecording()">Start Recording</button>
     <button onclick="stopRecording()">Stop Recording</button>
     <p id="status">Press start to begin recording.</p>
-    <input type="hidden" id="audioInput">
+    <input type="hidden" id="audioInput" onchange="sendAudioToStreamlit()">
+    <script>
+        function sendAudioToStreamlit() {
+            const audioValue = document.getElementById("audioInput").value;
+            if (audioValue) {
+                const audioInputField = document.getElementById("audioInputHidden");
+                audioInputField.value = audioValue;
+                audioInputField.dispatchEvent(new Event('input'));
+            }
+        }
+    </script>
+    <input type="hidden" id="audioInputHidden">
     """
 
     # Embed HTML5 Audio Recorder
