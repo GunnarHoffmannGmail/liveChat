@@ -27,6 +27,7 @@ def main():
                 audioChunks.push(event.data);
             };
             mediaRecorder.start();
+            document.getElementById("status").innerText = "Recording...";
         }
 
         function stopRecording() {
@@ -39,24 +40,26 @@ def main():
                     const base64AudioMessage = reader.result.split(',')[1];
                     const audioInput = document.getElementById("audioInput");
                     audioInput.value = base64AudioMessage;
-                    document.getElementById("audioForm").submit();
+                    const stopEvent = new Event('change');
+                    audioInput.dispatchEvent(stopEvent);
                 };
+                document.getElementById("status").innerText = "Recording stopped.";
             };
         }
     </script>
     <button onclick="startRecording()">Start Recording</button>
     <button onclick="stopRecording()">Stop Recording</button>
-    <form id="audioForm" action="#" method="post">
-        <input type="hidden" id="audioInput" name="audio">
-    </form>
+    <p id="status">Press start to begin recording.</p>
+    <input type="hidden" id="audioInput">
     """
 
     # Embed HTML5 Audio Recorder
-    html(audio_recorder_html)
+    audio_data = html(audio_recorder_html, script=True)
 
-    # Retrieve recorded audio from form submission
-    if "audio" in st.experimental_get_query_params():
-        audio_base64 = st.experimental_get_query_params()["audio"][0]
+    # Handle audio data submission
+    audio_base64 = st.experimental_get_query_params().get("audio", [None])[0]
+
+    if audio_base64:
         audio_bytes = base64.b64decode(audio_base64)
 
         # Save the audio to a temporary file
