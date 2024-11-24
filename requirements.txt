@@ -3,5 +3,4 @@ streamlit-audiorecorder
 SpeechRecognition
 soundfile
 scipy
-tempfile
 wavio
