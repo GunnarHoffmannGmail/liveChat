@@ -8,11 +8,11 @@ from streamlit.components.v1 import html
 # Set up Streamlit page
 def main():
     st.title("Real-time Speech to Text")
-    st.write("Click the button below to start speaking. Your speech will be converted to text and displayed below.")
+    st.write("Click the buttons below to start or stop speaking. Your speech will be converted to text and displayed live below.")
 
     recognizer = sr.Recognizer()
 
-    # HTML5 Audio Recorder
+    # HTML5 Audio Recorder with Start and Stop buttons
     audio_recorder_html = """
     <script>
         let stream;
@@ -22,9 +22,15 @@ def main():
         async function startRecording() {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
             mediaRecorder.ondataavailable = event => {
                 audioChunks.push(event.data);
             };
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 const reader = new FileReader();
@@ -36,13 +42,10 @@ def main():
                     document.getElementById("audioForm").submit();
                 };
             };
-            mediaRecorder.start();
-            setTimeout(() => {
-                mediaRecorder.stop();
-            }, 5000); // Record for 5 seconds
         }
     </script>
     <button onclick="startRecording()">Start Recording</button>
+    <button onclick="stopRecording()">Stop Recording</button>
     <form id="audioForm" action="#" method="post">
         <input type="hidden" id="audioInput" name="audio">
     </form>
@@ -66,7 +69,10 @@ def main():
             with sr.AudioFile(temp_path) as source:
                 audio = recognizer.record(source)
                 text = recognizer.recognize_google(audio)
-                st.text_area("Recognized Text", text, height=200)
+                if "recognized_text" not in st.session_state:
+                    st.session_state["recognized_text"] = ""
+                st.session_state["recognized_text"] += " " + text
+                st.text_area("Recognized Text", st.session_state["recognized_text"], height=200)
         except sr.UnknownValueError:
             st.error("Could not understand the audio. Please try again.")
         except sr.RequestError:
