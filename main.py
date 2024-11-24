@@ -22,6 +22,7 @@ class SpeechRecognitionProcessor(AudioProcessorBase):
     def recv(self, frame):
         st.write("Received audio frame")
         audio_data = frame.to_ndarray()
+        st.write(f"Audio data shape: {audio_data.shape}")
         audio = sr.AudioData(audio_data.tobytes(), frame.sample_rate, frame.sample_width)
 
         try:
