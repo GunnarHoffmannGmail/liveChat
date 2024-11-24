@@ -40,8 +40,7 @@ def main():
                     const base64AudioMessage = reader.result.split(',')[1];
                     const audioInput = document.getElementById("audioInput");
                     audioInput.value = base64AudioMessage;
-                    const stopEvent = new Event('change');
-                    audioInput.dispatchEvent(stopEvent);
+                    audioInput.dispatchEvent(new Event('input'));
                 };
                 document.getElementById("status").innerText = "Recording stopped.";
             };
@@ -54,10 +53,10 @@ def main():
     """
 
     # Embed HTML5 Audio Recorder
-    audio_data = html(audio_recorder_html, script=True)
+    audio_data = html(audio_recorder_html)
 
     # Handle audio data submission
-    audio_base64 = st.experimental_get_query_params().get("audio", [None])[0]
+    audio_base64 = st.text_input("", key="audioInputHidden")
 
     if audio_base64:
         audio_bytes = base64.b64decode(audio_base64)
