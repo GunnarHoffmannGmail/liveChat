@@ -59,5 +59,17 @@ def text_to_speech(text):
 st.title("Live Chat Mode with Speech Recognition")
 st.subheader("This app listens to live speech and displays recognized text in real-time.")
 
+# Initialize session state for controlling the WebRTC streamer
+if "webrtc_started" not in st.session_state:
+    st.session_state.webrtc_started = False
+
+# Start and Stop buttons
 if st.button("Start Live Chat Listening"):
+    st.session_state.webrtc_started = True
+
+if st.button("Stop Live Chat Listening"):
+    st.session_state.webrtc_started = False
+
+# Start the WebRTC streamer if the start button was pressed
+if st.session_state.webrtc_started:
     webrtc_streamer(key="speech-recognition", audio_processor_factory=SpeechRecognitionProcessor, client_settings=WEBRTC_CLIENT_SETTINGS)
