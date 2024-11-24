@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, ClientSettings
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 import speech_recognition as sr
 import openai
 from gtts import gTTS
@@ -8,16 +8,16 @@ import os
 # Set up OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["openai"]["api_key"]
 
-# WebRTC client settings to ensure the dialog box remains
-WEBRTC_CLIENT_SETTINGS = ClientSettings(
-    media_stream_constraints={
-        "audio": True,
-        "video": False,
-    },
-    rtc_configuration={
-        "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-    },
-)
+# WebRTC configuration
+RTC_CONFIGURATION = {
+    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+}
+
+# Media stream constraints
+MEDIA_STREAM_CONSTRAINTS = {
+    "audio": True,
+    "video": False,
+}
 
 # Custom audio processor for speech recognition
 class SpeechRecognitionProcessor(AudioProcessorBase):
@@ -56,7 +56,7 @@ def text_to_speech(text):
     tts.save("response.mp3")
     os.system("mpg321 response.mp3")
 
-# Streamlit app layout1
+# Streamlit app layout
 st.title("Live Chat Mode with Speech Recognition")
 st.subheader("This app listens to live speech and displays recognized text in real-time.")
 
@@ -73,7 +73,12 @@ if st.button("Stop Live Chat Listening"):
 
 # Start the WebRTC streamer if the start button was pressed
 if st.session_state.webrtc_started:
-    webrtc_streamer(key="speech-recognition", audio_processor_factory=SpeechRecognitionProcessor, client_settings=WEBRTC_CLIENT_SETTINGS)
+    webrtc_streamer(
+        key="speech-recognition",
+        audio_processor_factory=SpeechRecognitionProcessor,
+        rtc_configuration=RTC_CONFIGURATION,
+        media_stream_constraints=MEDIA_STREAM_CONSTRAINTS
+    )
 
 
 
