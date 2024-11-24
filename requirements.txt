@@ -2,3 +2,4 @@ streamlit
 streamlit-audiorecorder
 SpeechRecognition
 soundfile
+scipy
