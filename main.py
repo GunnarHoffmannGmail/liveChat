@@ -3,8 +3,9 @@ from streamlit_mic_recorder import mic_recorder, speech_to_text
 
 
 def callback():
-    if st.session_state.my_stt_output:
-        st.write(st.session_state.my_stt_output)
+    if st.session_state.my_recorder_output:
+        audio_bytes = st.session_state.my_recorder_output['bytes']
+        st.audio(audio_bytes)
 
 state = st.session_state
 
