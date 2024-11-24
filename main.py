@@ -36,6 +36,7 @@ class SpeechRecognitionProcessor(AudioProcessorBase):
                 response = process_input(text)
                 st.write(f"Response: {response}")
                 text_to_speech(response)
+                st.text_area("Recognized Text:", value=text, height=100, key="recognized_text")
         except sr.UnknownValueError:
             self.text_placeholder.text("Listening...")
         except sr.RequestError:
