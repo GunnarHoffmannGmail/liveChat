@@ -1,7 +1,4 @@
 import streamlit as st
-import speech_recognition as sr
-import tempfile
-import os
 import base64
 from streamlit.components.v1 import html
 
@@ -9,8 +6,6 @@ from streamlit.components.v1 import html
 def main():
     st.title("Real-time Speech to Text")
     st.write("Click the buttons below to start or stop speaking. Your speech will be converted to text and displayed live below.")
-
-    recognizer = sr.Recognizer()
 
     # HTML5 Audio Recorder with Start and Stop buttons
     audio_recorder_html = """
@@ -38,57 +33,47 @@ def main():
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     const base64AudioMessage = reader.result.split(',')[1];
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.src = 'data:text/plain;base64,' + base64AudioMessage;
-                    document.body.appendChild(iframe);
-                    iframe.onload = function() {
-                        setTimeout(() => document.body.removeChild(iframe), 1000);
-                    };
-                    const audioInputField = document.getElementById("audioInputHidden");
-                    audioInputField.value = base64AudioMessage;
-                    audioInputField.dispatchEvent(new Event('input'));
+                    recognizeSpeech(base64AudioMessage);
                 };
                 document.getElementById("status").innerText = "Recording stopped.";
             };
+        }
+
+        async function recognizeSpeech(base64Audio) {
+            const response = await fetch('https://speech.googleapis.com/v1p1beta1/speech:recognize?key=YOUR_API_KEY', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "config": {
+                        "encoding": "LINEAR16",
+                        "sampleRateHertz": 44100,
+                        "languageCode": "en-US"
+                    },
+                    "audio": {
+                        "content": base64Audio
+                    }
+                })
+            });
+            const result = await response.json();
+            if (result.results && result.results.length > 0) {
+                const transcript = result.results[0].alternatives[0].transcript;
+                const textArea = document.getElementById("recognizedText");
+                textArea.value += transcript + " ";
+            } else {
+                alert("Could not understand the audio. Please try again.");
+            }
         }
     </script>
     <button onclick="startRecording()">Start Recording</button>
     <button onclick="stopRecording()">Stop Recording</button>
     <p id="status">Press start to begin recording.</p>
-    <input type="hidden" id="audioInputHidden">
+    <textarea id="recognizedText" style="width: 100%; height: 200px;"></textarea>
     """
 
     # Embed HTML5 Audio Recorder
     html(audio_recorder_html)
-
-    # Handle audio data submission
-    audio_base64 = st.text_input("", key="audioInputHidden")
-
-    if audio_base64:
-        audio_bytes = base64.b64decode(audio_base64)
-
-        # Save the audio to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-            tmp_file.write(audio_bytes)
-            temp_path = tmp_file.name
-
-        # Recognize the speech using Google Web Speech API
-        try:
-            with sr.AudioFile(temp_path) as source:
-                audio = recognizer.record(source)
-                text = recognizer.recognize_google(audio)
-                if "recognized_text" not in st.session_state:
-                    st.session_state["recognized_text"] = ""
-                st.session_state["recognized_text"] += " " + text
-                st.text_area("Recognized Text", st.session_state["recognized_text"], height=200)
-        except sr.UnknownValueError:
-            st.error("Could not understand the audio. Please try again.")
-        except sr.RequestError:
-            st.error("Could not request results, please check your internet connection.")
-        finally:
-            # Clean up the temporary file
-            os.remove(temp_path)
 
 if __name__ == "__main__":
     main()
