@@ -87,18 +87,19 @@ st.text_area("Debug Info", value=st.session_state.debug_info, height=200, key="d
 
 # Start processing audio in a separate thread
 def start_audio_processing():
-    st.write("Debug 0")
     if 'processing_thread' not in st.session_state:
-        st.write("Debug 1")
+        st.session_state.debug_info += "Starting audio processing thread...\n"
         processing_thread = threading.Thread(target=process_audio_stream, daemon=True)
         processing_thread.start()
         st.session_state.processing_thread = processing_thread
 
-# Start listening using WebRTC and initiate processing
-webrtc_streamer(
+# Start listening using WebRTC and initiate processing based on state change
+webrtc_ctx = webrtc_streamer(
     key="speech-to-text",
     mode=WebRtcMode.SENDONLY,
     audio_processor_factory=SpeechToTextProcessor,
     media_stream_constraints={"audio": True, "video": False},
-    on_change=start_audio_processing
 )
+
+if webrtc_ctx.state.playing:
+    start_audio_processing()
