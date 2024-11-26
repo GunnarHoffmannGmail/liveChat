@@ -4,3 +4,4 @@ google-cloud-speech
 numpy
 opencv-python-headless
 whisper
+av
