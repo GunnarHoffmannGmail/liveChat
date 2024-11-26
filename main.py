@@ -4,6 +4,7 @@ import numpy as np
 import queue
 import json
 from google.cloud import speech
+import threading
 
 # Set up Google API credentials from Streamlit secrets
 google_api_key_json = st.secrets["mykey"]
@@ -18,6 +19,9 @@ st.text("Press 'Start' to begin capturing your speech!")
 # Queue to handle audio frames
 audio_queue = queue.Queue()
 
+# Control flag for stopping the listening thread
+stop_listening = threading.Event()
+
 class SpeechToTextProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
@@ -25,16 +29,21 @@ class SpeechToTextProcessor(AudioProcessorBase):
         self.language_code = "en-US"
 
     def recv(self, frame):
-        audio_data = frame.to_ndarray().flatten().astype(np.int16)
-        audio_queue.put(audio_data)
+        if not stop_listening.is_set():
+            audio_data = frame.to_ndarray().flatten().astype(np.int16)
+            audio_queue.put(audio_data)
         return frame
 
 # Function to process audio and transcribe using Google Speech-to-Text
 def process_audio_stream():
     audio_frames = []
 
-    while True:
-        audio_data = audio_queue.get()
+    while not stop_listening.is_set():
+        try:
+            audio_data = audio_queue.get(timeout=1)
+        except queue.Empty:
+            continue
+
         if audio_data is None:
             break
         audio_frames.append(audio_data)
@@ -55,7 +64,26 @@ def process_audio_stream():
             if response.results:
                 for result in response.results:
                     transcript = result.alternatives[0].transcript
-                    st.write(transcript)
+                    st.session_state.transcript += transcript + "\n"
+                    st.experimental_rerun()
+
+# Initialize session state for transcript
+if 'transcript' not in st.session_state:
+    st.session_state.transcript = ""
+
+# Display the transcript
+st.text_area("Transcript", value=st.session_state.transcript, height=200)
+
+# Start listening in a separate thread
+if st.button("Start Listening"):
+    stop_listening.clear()
+    listen_thread = threading.Thread(target=process_audio_stream, daemon=True)
+    listen_thread.start()
+
+# Stop listening
+if st.button("Stop Listening"):
+    stop_listening.set()
+    audio_queue.put(None)  # To unblock the queue in case it's waiting
 
 webrtc_streamer(
     key="speech-to-text",
@@ -63,5 +91,3 @@ webrtc_streamer(
     audio_processor_factory=SpeechToTextProcessor,
     media_stream_constraints={"audio": True, "video": False},
 )
-
-st.button("Process Audio", on_click=process_audio_stream)
