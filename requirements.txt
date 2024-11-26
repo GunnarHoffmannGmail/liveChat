@@ -1,4 +1,3 @@
 streamlit
-sounddevice
-numpy
+speechrecognition
 google-cloud-speech
