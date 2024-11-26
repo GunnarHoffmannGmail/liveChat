@@ -4,7 +4,7 @@ import json
 from google.cloud import speech
 
 # Set up Google API credentials from Streamlit secrets
-google_api_key_json = st.secrets["google_api_key_json"]
+google_api_key_json = st.secrets["mykey"]
 
 # Initialize the Google Cloud Speech client
 client = speech.SpeechClient.from_service_account_info(json.loads(google_api_key_json))
