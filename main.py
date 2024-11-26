@@ -87,6 +87,7 @@ st.text_area("Debug Info", value=st.session_state.debug_info, height=200, key="d
 
 # Start processing audio in a separate thread
 def start_audio_processing():
+    st.write("Debug 0")
     if 'processing_thread' not in st.session_state:
         st.write("Debug 1")
         processing_thread = threading.Thread(target=process_audio_stream, daemon=True)
