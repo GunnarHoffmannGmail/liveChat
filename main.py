@@ -6,7 +6,7 @@ from google.cloud import speech
 import os
 
 # Set up Google API credentials from Streamlit secrets
-google_api_key_json = st.secrets["google_api_key_json"]
+google_api_key_json = st.secrets["mykey"]
 
 # Initialize the Google Cloud Speech client
 import json
