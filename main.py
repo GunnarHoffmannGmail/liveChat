@@ -1,12 +1,13 @@
 import streamlit as st
-import pyaudio
+import sounddevice as sd
+import numpy as np
 import queue
 import threading
 from google.cloud import speech
 import os
 
 # Set up Google API credentials from Streamlit secrets
-google_api_key_json = st.secrets["mykey"]
+google_api_key_json = st.secrets["google_api_key_json"]
 
 # Initialize the Google Cloud Speech client
 import json
@@ -25,26 +26,24 @@ audio_queue = queue.Queue()
 
 # Function to capture audio from microphone
 def microphone_stream():
-    audio_interface = pyaudio.PyAudio()
-    stream = audio_interface.open(
-        format=pyaudio.paInt16,
+    def callback(indata, frames, time, status):
+        if status:
+            st.error(f"Error: {status}")
+        audio_queue.put(indata.copy())
+
+    stream = sd.InputStream(
+        samplerate=RATE,
         channels=1,
-        rate=RATE,
-        input=True,
-        frames_per_buffer=CHUNK,
-        stream_callback=callback,
+        callback=callback,
+        blocksize=CHUNK
     )
     return stream
-
-# Audio callback to put the audio data into the queue
-def callback(in_data, frame_count, time_info, status):
-    audio_queue.put(in_data)
-    return in_data, pyaudio.paContinue
 
 # Function to listen to audio and recognize text
 def listen_print_loop():
     stream = microphone_stream()
     with stream:
+        stream.start()
         audio_generator = stream_generator()
         requests = (
             speech.StreamingRecognizeRequest(audio_content=content)
@@ -71,7 +70,7 @@ def stream_generator():
         chunk = audio_queue.get()
         if chunk is None:
             return
-        yield chunk
+        yield chunk.tobytes()
 
 # Function to process responses from Google Speech-to-Text
 def process_responses(responses):
