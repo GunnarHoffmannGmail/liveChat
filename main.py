@@ -88,6 +88,7 @@ st.text_area("Debug Info", value=st.session_state.debug_info, height=200, key="d
 # Start processing audio in a separate thread
 def start_audio_processing():
     if 'processing_thread' not in st.session_state:
+        st.write("Debug 1")
         processing_thread = threading.Thread(target=process_audio_stream, daemon=True)
         processing_thread.start()
         st.session_state.processing_thread = processing_thread
@@ -100,4 +101,3 @@ webrtc_streamer(
     media_stream_constraints={"audio": True, "video": False},
     on_change=start_audio_processing
 )
-
