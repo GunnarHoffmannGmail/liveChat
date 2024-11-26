@@ -1,113 +1,73 @@
 import streamlit as st
-import streamlit.components.v1 as components
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
+import numpy as np
+import queue
+import json
+from google.cloud import speech
 
 # Streamlit app configuration
 st.title("Live Speech-to-Text App with Microphone")
 
 # Extract Google API key from secrets
-import json
 api_key_info = json.loads(st.secrets["mykey"])
 api_key = api_key_info.get("api_key") or api_key_info.get("private_key")
 
-# Embed the HTML code using Streamlit's components.html function
-components.html(
-    f"""
-    <!DOCTYPE html>
-    <html lang='en'>
-    <head>
-        <meta charset='UTF-8'>
-        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Live Speech-to-Text with Google API</title>
-    </head>
-    <body>
-        <h1>Live Speech-to-Text App with Microphone</h1>
-        <p>Press 'Start' to begin capturing your speech!</p>
-        
-        <button id='startButton'>Start Listening</button>
-        <button id='stopButton' disabled>Stop Listening</button>
-        <textarea id='transcript' rows='10' cols='100'></textarea>
+# Queue to handle audio frames
+audio_queue = queue.Queue()
 
-        <script>
-            let mediaRecorder;
-            let audioChunks = [];
-            let stopFlag = false;
+# Google Speech-to-Text configuration
+client = speech.SpeechClient.from_service_account_info(api_key_info)
 
-            document.getElementById('startButton').addEventListener('click', async () => {{
-                stopFlag = false;
-                document.getElementById('startButton').disabled = true;
-                document.getElementById('stopButton').disabled = false;
-                audioChunks = [];
+class SpeechToTextProcessor(AudioProcessorBase):
+    def __init__(self):
+        super().__init__()
+        self.sampling_rate = 16000
+        self.language_code = "en-US"
 
-                try {{
-                    const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
-                    mediaRecorder = new MediaRecorder(stream);
+    def recv(self, frame):
+        audio_data = frame.to_ndarray().flatten().astype(np.int16)
+        audio_queue.put(audio_data)
+        return frame
 
-                    mediaRecorder.addEventListener('dataavailable', event => {{
-                        audioChunks.push(event.data);
-                    }});
+def process_audio_stream():
+    audio_frames = []
 
-                    mediaRecorder.addEventListener('stop', async () => {{
-                        if (stopFlag) {{
-                            return;
-                        }}
+    while True:
+        audio_data = audio_queue.get()
+        if audio_data is None:
+            break
+        audio_frames.append(audio_data)
 
-                        const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
-                        const reader = new FileReader();
-                        reader.readAsDataURL(audioBlob);
-                        reader.onloadend = async () => {{
-                            const base64AudioMessage = reader.result.split(',')[1];
-                            
-                            const apiKey = "{api_key}";
-                            const requestPayload = {{
-                                audio: {{
-                                    content: base64AudioMessage
-                                }},
-                                config: {{
-                                    encoding: "LINEAR16",
-                                    sampleRateHertz: 16000,
-                                    languageCode: "en-US"
-                                }}
-                            }};
+        if len(audio_frames) > 100:  # Process after 100 chunks for efficiency
+            audio_content = np.concatenate(audio_frames).tobytes()
+            audio_frames = []
 
-                            try {{
-                                const response = await fetch(
-                                    `https://speech.googleapis.com/v1/speech:recognize?key=${{apiKey}}`,
-                                    {{
-                                        method: "POST",
-                                        headers: {{
-                                            "Content-Type": "application/json"
-                                        }},
-                                        body: JSON.stringify(requestPayload)
-                                    }}
-                                );
-                                const responseData = await response.json();
+            # Configure Google Speech-to-Text
+            config = speech.RecognitionConfig(
+                encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+                sample_rate_hertz=16000,
+                language_code="en-US",
+            )
+            audio = speech.RecognitionAudio(content=audio_content)
+            response = client.recognize(config=config, audio=audio)
 
-                                if (responseData.results) {{
-                                    const transcript = responseData.results.map(result => result.alternatives[0].transcript).join("\n");
-                                    document.getElementById('transcript').value += transcript + "\n";
-                                }}
-                            }} catch (error) {{
-                                console.error("Error fetching the Google Speech-to-Text API:", error);
-                            }}
-                        }};
-                    }});
+            if response.results:
+                for result in response.results:
+                    transcript = result.alternatives[0].transcript
+                    st.session_state.transcript += transcript + "\n"
+                    st.experimental_rerun()
 
-                    mediaRecorder.start();
-                }} catch (error) {{
-                    console.error("Error accessing microphone:", error);
-                }}
-            }});
+# Initialize session state for transcript
+if 'transcript' not in st.session_state:
+    st.session_state.transcript = ""
 
-            document.getElementById('stopButton').addEventListener('click', () => {{
-                stopFlag = true;
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('stopButton').disabled = true;
-                mediaRecorder.stop();
-            }});
-        </script>
-    </body>
-    </html>
-    """,
-    height=600,
-    scrolling=True
+# Display the transcript
+st.text_area("Transcript", value=st.session_state.transcript, height=200)
+
+# Start listening using WebRTC
+webrtc_streamer(
+    key="speech-to-text",
+    mode=WebRtcMode.SENDONLY,
+    audio_processor_factory=SpeechToTextProcessor,
+    media_stream_constraints={"audio": True, "video": False},
 )
