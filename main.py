@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 st.title("Live Speech-to-Text App with Microphone")
 
 # Extract Google API key from secrets
-api_key = st.secrets["mykey"]["api_key"]
+api_key = st.secrets["mykey"]["private_key"]
 
 # Embed the HTML code using Streamlit's components.html function
 components.html(
