@@ -35,7 +35,6 @@ class SpeechToTextProcessor(AudioProcessorBase):
         audio_data = frame.to_ndarray().flatten().astype(np.int16)
         audio_queue.put(audio_data)
         st.session_state.debug_info += "Received audio frame\n"
-        st.experimental_rerun()
         return frame
 
 def process_audio_stream():
@@ -46,7 +45,6 @@ def process_audio_stream():
             audio_data = audio_queue.get(timeout=1)
         except queue.Empty:
             st.session_state.debug_info += "Queue is empty, waiting for audio data...\n"
-            st.experimental_rerun()
             continue
 
         if audio_data is None:
@@ -72,12 +70,10 @@ def process_audio_stream():
                         transcript = result.alternatives[0].transcript
                         st.session_state.transcript += transcript + "\n"
                         st.session_state.debug_info += f"Transcript received: {transcript}\n"
-                        st.experimental_rerun()
                 else:
                     st.session_state.debug_info += "No transcription result received.\n"
             except Exception as e:
                 st.session_state.debug_info += f"Error during transcription: {e}\n"
-                st.experimental_rerun()
 
 # Display the transcript and debug information
 st.text_area("Transcript", value=st.session_state.transcript, height=200)
@@ -85,8 +81,10 @@ st.text_area("Debug Info", value=st.session_state.debug_info, height=200)
 
 # Start processing audio in a separate thread
 def start_audio_processing():
-    processing_thread = threading.Thread(target=process_audio_stream, daemon=True)
-    processing_thread.start()
+    if 'processing_thread' not in st.session_state:
+        processing_thread = threading.Thread(target=process_audio_stream, daemon=True)
+        processing_thread.start()
+        st.session_state.processing_thread = processing_thread
 
 # Start listening using WebRTC and initiate processing
 webrtc_streamer(
