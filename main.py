@@ -1,24 +1,23 @@
-from google.cloud import speech
-import io
+import streamlit as st
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, VideoTransformerBase
+import wave
+from io import BytesIO
 
-def transcribe_audio(audio_data):
-    # Initialize the Speech client
-    client = speech.SpeechClient()
+class AudioTransformer(VideoTransformerBase):
+    def transform(self, frame):
+        # Assuming frame contains audio data, convert to appropriate format (PCM)
+        audio_data = frame.to_ndarray()
+        # Send audio_data to Google Speech API for transcription
+        transcription = transcribe_audio(audio_data)
+        return transcription
 
-    # Audio configuration
-    audio = speech.RecognitionAudio(content=audio_data)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,
-        language_code="en-US",
+def app():
+    st.title("Real-time Speech-to-Text")
+    webrtc_streamer(
+        key="speech-to-text",
+        mode=WebRtcMode.SENDRECV,
+        video_transformer_factory=AudioTransformer
     )
 
-    # Perform the transcription
-    response = client.recognize(config=config, audio=audio)
-
-    # Extract the transcription
-    transcriptions = []
-    for result in response.results:
-        transcriptions.append(result.alternatives[0].transcript)
-    
-    return " ".join(transcriptions)
+if __name__ == "__main__":
+    app()
