@@ -103,5 +103,5 @@ webrtc_ctx = webrtc_streamer(
     media_stream_constraints={"audio": True, "video": False},
 )
 
-if webrtc_ctx.state.playing:
-    start_audio_processing()
+#if webrtc_ctx.state.playing:
+start_audio_processing()
