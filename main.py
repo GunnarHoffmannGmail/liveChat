@@ -3,6 +3,7 @@ from streamlit_webrtc import webrtc_streamer, AudioProcessorBase, WebRtcMode
 import numpy as np
 import queue
 import json
+import threading
 from google.cloud import speech
 
 # Streamlit app configuration
@@ -18,6 +19,12 @@ audio_queue = queue.Queue()
 # Google Speech-to-Text configuration
 client = speech.SpeechClient.from_service_account_info(api_key_info)
 
+# Initialize session state for transcript and debugging info
+if 'transcript' not in st.session_state:
+    st.session_state.transcript = ""
+if 'debug_info' not in st.session_state:
+    st.session_state.debug_info = ""
+
 class SpeechToTextProcessor(AudioProcessorBase):
     def __init__(self):
         super().__init__()
@@ -27,18 +34,27 @@ class SpeechToTextProcessor(AudioProcessorBase):
     def recv(self, frame):
         audio_data = frame.to_ndarray().flatten().astype(np.int16)
         audio_queue.put(audio_data)
+        st.session_state.debug_info += "Received audio frame\n"
+        st.experimental_rerun()
         return frame
 
 def process_audio_stream():
     audio_frames = []
 
     while True:
-        audio_data = audio_queue.get()
+        try:
+            audio_data = audio_queue.get(timeout=1)
+        except queue.Empty:
+            st.session_state.debug_info += "Queue is empty, waiting for audio data...\n"
+            st.experimental_rerun()
+            continue
+
         if audio_data is None:
             break
         audio_frames.append(audio_data)
 
         if len(audio_frames) > 100:  # Process after 100 chunks for efficiency
+            st.session_state.debug_info += "Processing audio frames...\n"
             audio_content = np.concatenate(audio_frames).tobytes()
             audio_frames = []
 
@@ -49,25 +65,34 @@ def process_audio_stream():
                 language_code="en-US",
             )
             audio = speech.RecognitionAudio(content=audio_content)
-            response = client.recognize(config=config, audio=audio)
+            try:
+                response = client.recognize(config=config, audio=audio)
+                if response.results:
+                    for result in response.results:
+                        transcript = result.alternatives[0].transcript
+                        st.session_state.transcript += transcript + "\n"
+                        st.session_state.debug_info += f"Transcript received: {transcript}\n"
+                        st.experimental_rerun()
+                else:
+                    st.session_state.debug_info += "No transcription result received.\n"
+            except Exception as e:
+                st.session_state.debug_info += f"Error during transcription: {e}\n"
+                st.experimental_rerun()
 
-            if response.results:
-                for result in response.results:
-                    transcript = result.alternatives[0].transcript
-                    st.session_state.transcript += transcript + "\n"
-                    st.experimental_rerun()
-
-# Initialize session state for transcript
-if 'transcript' not in st.session_state:
-    st.session_state.transcript = ""
-
-# Display the transcript
+# Display the transcript and debug information
 st.text_area("Transcript", value=st.session_state.transcript, height=200)
+st.text_area("Debug Info", value=st.session_state.debug_info, height=200)
 
-# Start listening using WebRTC
+# Start processing audio in a separate thread
+def start_audio_processing():
+    processing_thread = threading.Thread(target=process_audio_stream, daemon=True)
+    processing_thread.start()
+
+# Start listening using WebRTC and initiate processing
 webrtc_streamer(
     key="speech-to-text",
     mode=WebRtcMode.SENDONLY,
     audio_processor_factory=SpeechToTextProcessor,
     media_stream_constraints={"audio": True, "video": False},
+    on_change=start_audio_processing
 )
