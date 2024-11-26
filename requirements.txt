@@ -1,3 +1,6 @@
 streamlit
-speechrecognition
+streamlit-webrtc
 google-cloud-speech
+numpy
+av
+opencv-python-headless
