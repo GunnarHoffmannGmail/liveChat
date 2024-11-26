@@ -1,78 +1,95 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
-import speech_recognition as sr
+import pyaudio
+import queue
+import threading
+from google.cloud import speech
+import os
 
-# WebRTC configuration
-RTC_CONFIGURATION = {
-    "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
-}
+# Set up Google API credentials from Streamlit secrets
+google_api_key_json = st.secrets["google_api_key_json"]
 
-# Media stream constraints
-MEDIA_STREAM_CONSTRAINTS = {
-    "audio": True,
-    "video": False,
-}
+# Initialize the Google Cloud Speech client
+import json
+client = speech.SpeechClient.from_service_account_info(json.loads(google_api_key_json))
 
-# Custom audio processor for speech recognition
-class SpeechRecognitionProcessor(AudioProcessorBase):
-    def __init__(self):
-        self.recognizer = sr.Recognizer()
-        self.text_placeholder = st.empty()
+# Streamlit app configuration
+st.title("Live Speech-to-Text App")
+st.text("Speak into your microphone and see the live transcription below!")
 
-    def recv(self, frame):
-        st.write("Received audio frame")
-        audio_data = frame.to_ndarray()
-        st.write(f"Audio data shape: {audio_data.shape}")
-        audio = sr.AudioData(audio_data.tobytes(), frame.sample_rate, frame.sample_width)
+# Audio recording configuration
+RATE = 16000
+CHUNK = int(RATE / 10)  # 100ms
 
-        try:
-            st.write("Recognizing speech...")
-            text = self.recognizer.recognize_google(audio)
-            st.write(f"Recognized text: {text}")
-            if text:
-                self.text_placeholder.text(f"Recognized: {text}")
-        except sr.UnknownValueError:
-            self.text_placeholder.text("Listening...")
-            st.write("Listening...")
-        except sr.RequestError:
-            self.text_placeholder.text("Sorry, my speech service is down.")
-            st.write("Sorry, my speech service is down.")
-        except Exception as e:
-            self.text_placeholder.text(f"Error: {str(e)}")
-            st.error(f"Error: {str(e)}")
-            st.write(f"Error: {str(e)}")
+# Queue to communicate between the audio callback and main thread
+audio_queue = queue.Queue()
 
-# Streamlit app layout
-st.title("Live Speech Recognition")
-st.subheader("This app listens to live speech and displays recognized text in real-time.")
-
-# Initialize session state for controlling the WebRTC streamer
-if "webrtc_started" not in st.session_state:
-    st.session_state.webrtc_started = False
-
-# Start and Stop buttons
-if st.button("Start Listening"):
-    st.session_state.webrtc_started = True
-    st.write("Started listening")
-
-if st.button("Stop Listening"):
-    st.session_state.webrtc_started = False
-    st.write("Stopped listening")
-
-# Start the WebRTC streamer if the start button was pressed
-if st.session_state.webrtc_started:
-    st.write("Initializing WebRTC streamer...")
-    webrtc_streamer(
-        key="speech-recognition",
-        audio_processor_factory=SpeechRecognitionProcessor,
-        rtc_configuration=RTC_CONFIGURATION,
-        media_stream_constraints=MEDIA_STREAM_CONSTRAINTS
+# Function to capture audio from microphone
+def microphone_stream():
+    audio_interface = pyaudio.PyAudio()
+    stream = audio_interface.open(
+        format=pyaudio.paInt16,
+        channels=1,
+        rate=RATE,
+        input=True,
+        frames_per_buffer=CHUNK,
+        stream_callback=callback,
     )
-    st.write("WebRTC streamer initialized")
-else:
-    st.write("WebRTC streamer not started")
+    return stream
 
+# Audio callback to put the audio data into the queue
+def callback(in_data, frame_count, time_info, status):
+    audio_queue.put(in_data)
+    return in_data, pyaudio.paContinue
 
+# Function to listen to audio and recognize text
+def listen_print_loop():
+    stream = microphone_stream()
+    with stream:
+        audio_generator = stream_generator()
+        requests = (
+            speech.StreamingRecognizeRequest(audio_content=content)
+            for content in audio_generator
+        )
 
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+            sample_rate_hertz=RATE,
+            language_code="en-US",
+        )
 
+        streaming_config = speech.StreamingRecognitionConfig(
+            config=config,
+            interim_results=True,
+        )
 
+        responses = client.streaming_recognize(streaming_config, requests)
+        process_responses(responses)
+
+# Generator to yield audio chunks
+def stream_generator():
+    while True:
+        chunk = audio_queue.get()
+        if chunk is None:
+            return
+        yield chunk
+
+# Function to process responses from Google Speech-to-Text
+def process_responses(responses):
+    for response in responses:
+        if not response.results:
+            continue
+
+        result = response.results[0]
+        if not result.alternatives:
+            continue
+
+        transcript = result.alternatives[0].transcript
+        st.write(transcript)
+
+# Start listening in a separate thread
+def start_listening():
+    listen_thread = threading.Thread(target=listen_print_loop)
+    listen_thread.start()
+
+if st.button("Start Listening"):
+    start_listening()
