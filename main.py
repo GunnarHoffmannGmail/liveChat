@@ -36,76 +36,7 @@ components.html(
                 document.getElementById('stopButton').disabled = false;
                 audioChunks = [];
 
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
 
-                    mediaRecorder.addEventListener('dataavailable', event => {
-                        audioChunks.push(event.data);
-                    });
-
-                    mediaRecorder.addEventListener('stop', async () => {
-                        if (stopFlag) {
-                            return;
-                        }
-
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                        const reader = new FileReader();
-                        reader.readAsDataURL(audioBlob);
-                        reader.onloadend = async () => {
-                            const base64AudioMessage = reader.result.split(',')[1];
-                            
-                            const apiKey = "{api_key}";
-                            const requestPayload = {{
-                                audio: {{
-                                    content: base64AudioMessage
-                                }},
-                                config: {{
-                                    encoding: "LINEAR16",
-                                    sampleRateHertz: 16000,
-                                    languageCode: "en-US"
-                                }}
-                            }};
-
-                            try {
-                                const response = await fetch(
-                                    `https://speech.googleapis.com/v1/speech:recognize?key=${{apiKey}}`,
-                                    {{
-                                        method: "POST",
-                                        headers: {{
-                                            "Content-Type": "application/json"
-                                        }},
-                                        body: JSON.stringify(requestPayload)
-                                    }}
-                                );
-                                const responseData = await response.json();
-
-                                if (responseData.results) {
-                                    const transcript = responseData.results.map(result => result.alternatives[0].transcript).join("\\n");
-                                    document.getElementById('transcript').value += transcript + "\\n";
-                                }
-                            } catch (error) {
-                                console.error("Error fetching the Google Speech-to-Text API:", error);
-                            }
-                        };
-                    });
-
-                    mediaRecorder.start();
-                } catch (error) {
-                    console.error("Error accessing microphone:", error);
-                }
-            });
-
-            document.getElementById('stopButton').addEventListener('click', () => {
-                stopFlag = true;
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('stopButton').disabled = true;
-                mediaRecorder.stop();
-            });
-        </script>
-    </body>
-    </html>
-    """,
-    height=600,
-    scrolling=True
-)
+                mediaRecorder.addEventListener('da
