@@ -35,6 +35,7 @@ class SpeechToTextProcessor(AudioProcessorBase):
         audio_data = frame.to_ndarray().flatten().astype(np.int16)
         audio_queue.put(audio_data)
         st.session_state.debug_info += "Received audio frame\n"
+        st.session_state.debug_info = st.session_state.debug_info[-1000:]  # Limit debug info to last 1000 characters
         return frame
 
 def process_audio_stream():
@@ -45,6 +46,7 @@ def process_audio_stream():
             audio_data = audio_queue.get(timeout=1)
         except queue.Empty:
             st.session_state.debug_info += "Queue is empty, waiting for audio data...\n"
+            st.session_state.debug_info = st.session_state.debug_info[-1000:]  # Limit debug info to last 1000 characters
             continue
 
         if audio_data is None:
@@ -53,6 +55,7 @@ def process_audio_stream():
 
         if len(audio_frames) > 100:  # Process after 100 chunks for efficiency
             st.session_state.debug_info += "Processing audio frames...\n"
+            st.session_state.debug_info = st.session_state.debug_info[-1000:]  # Limit debug info to last 1000 characters
             audio_content = np.concatenate(audio_frames).tobytes()
             audio_frames = []
 
@@ -70,14 +73,17 @@ def process_audio_stream():
                         transcript = result.alternatives[0].transcript
                         st.session_state.transcript += transcript + "\n"
                         st.session_state.debug_info += f"Transcript received: {transcript}\n"
+                        st.session_state.debug_info = st.session_state.debug_info[-1000:]  # Limit debug info to last 1000 characters
                 else:
                     st.session_state.debug_info += "No transcription result received.\n"
+                    st.session_state.debug_info = st.session_state.debug_info[-1000:]  # Limit debug info to last 1000 characters
             except Exception as e:
                 st.session_state.debug_info += f"Error during transcription: {e}\n"
+                st.session_state.debug_info = st.session_state.debug_info[-1000:]  # Limit debug info to last 1000 characters
 
 # Display the transcript and debug information
-st.text_area("Transcript", value=st.session_state.transcript, height=200)
-st.text_area("Debug Info", value=st.session_state.debug_info, height=200)
+st.text_area("Transcript", value=st.session_state.transcript, height=200, key="transcript_area")
+st.text_area("Debug Info", value=st.session_state.debug_info, height=200, key="debug_info_area")
 
 # Start processing audio in a separate thread
 def start_audio_processing():
@@ -94,3 +100,4 @@ webrtc_streamer(
     media_stream_constraints={"audio": True, "video": False},
     on_change=start_audio_processing
 )
+
