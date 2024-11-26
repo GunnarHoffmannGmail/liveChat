@@ -1,10 +1,10 @@
 import streamlit as st
 import speech_recognition as sr
-from google.cloud import speech
 import json
+from google.cloud import speech
 
 # Set up Google API credentials from Streamlit secrets
-google_api_key_json = st.secrets["mykey"]
+google_api_key_json = st.secrets["google_api_key_json"]
 
 # Initialize the Google Cloud Speech client
 client = speech.SpeechClient.from_service_account_info(json.loads(google_api_key_json))
@@ -41,7 +41,6 @@ def listen_and_transcribe():
                 for result in response.results:
                     transcript = result.alternatives[0].transcript
                     st.write(transcript)
-
             else:
                 st.write("No speech detected.")
 
