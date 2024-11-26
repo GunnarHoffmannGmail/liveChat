@@ -1,49 +1,57 @@
 import streamlit as st
-import streamlit.components.v1 as components
-import base64
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
+import speech_recognition as sr
+import queue
+import threading
+import av
 
-# Embed custom HTML and JavaScript to capture audio from the microphone
-audio_capture_html = """
-    <html>
-        <body>
-            <h3>Click the button to start recording audio</h3>
-            <button id="startBtn">Start Recording</button>
-            <script>
-                const startBtn = document.getElementById('startBtn');
-                let mediaRecorder;
-                let audioChunks = [];
+# Configure WebRTC Client Settings
+RTC_CLIENT_SETTINGS = ClientSettings(
+    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+    media_stream_constraints={"audio": True, "video": False},
+)
 
-                startBtn.onclick = () => {
-                    if (navigator.mediaDevices) {
-                        navigator.mediaDevices.getUserMedia({ audio: true })
-                            .then(function(stream) {
-                                mediaRecorder = new MediaRecorder(stream);
-                                
-                                mediaRecorder.ondataavailable = function(event) {
-                                    audioChunks.push(event.data);
-                                    // Once recording stops, send the audio to the server
-                                    if (mediaRecorder.state === 'inactive') {
-                                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                                        const reader = new FileReader();
-                                        reader.onload = function() {
-                                            const audioData = reader.result.split(',')[1];  // Base64 encoded
-                                            window.parent.postMessage({ type: 'audio', data: audioData }, '*');
-                                        };
-                                        reader.readAsDataURL(audioBlob);
-                                    }
-                                };
+# Queue to hold audio frames
+audio_queue = queue.Queue()
 
-                                mediaRecorder.start();
-                                setTimeout(() => { 
-                                    mediaRecorder.stop();
-                                }, 5000); // Record for 5 seconds
-                            });
-                    }
-                };
-            </script>
-        </body>
-    </html>
-"""
+# Audio processing callback
+def audio_callback(frame: av.AudioFrame):
+    audio_data = frame.to_ndarray()
+    audio_queue.put(audio_data)
+    return frame
 
-# Display the custom HTML component
-components.html(audio_capture_html, height=300)
+# Transcription function
+def transcribe_audio():
+    recognizer = sr.Recognizer()
+    while True:
+        if not audio_queue.empty():
+            audio_data = audio_queue.get()
+            with sr.AudioFile(audio_data) as source:
+                try:
+                    # Recognize speech using Google Web Speech API
+                    text = recognizer.recognize_google(source)
+                    st.session_state.transcription = text
+                except sr.UnknownValueError:
+                    st.session_state.transcription = "Could not understand the audio"
+                except sr.RequestError as e:
+                    st.session_state.transcription = f"API Error: {e}"
+
+# Streamlit app
+st.title("Real-Time Audio Transcription with Streamlit WebRTC")
+
+# WebRTC Streamer
+webrtc_ctx = webrtc_streamer(
+    key="speech-to-text",
+    mode=WebRtcMode.SENDRECV,
+    client_settings=RTC_CLIENT_SETTINGS,
+    audio_frame_callback=audio_callback,
+)
+
+# Start transcription in a separate thread
+if "transcription" not in st.session_state:
+    st.session_state.transcription = ""
+    threading.Thread(target=transcribe_audio, daemon=True).start()
+
+# Display transcription in real-time
+st.text_area("Real-Time Transcription:", value=st.session_state.transcription, height=200)
+
