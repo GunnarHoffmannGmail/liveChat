@@ -1,5 +1,6 @@
 import streamlit as st
 from bs4 import BeautifulSoup
+import pandas as pd
 
 # Streamlit app title
 st.title("HTML Code Input App")
@@ -13,6 +14,28 @@ if html_code:
     soup = BeautifulSoup(html_code, "html.parser")
     tables = soup.find_all("table")
 
+    for table in tables:
+        headers = [th.get_text(strip=True) for th in table.find_all("th")]
+        rows = []
+        for row in table.find_all("tr")[1:]:  # Skip the header row
+            cells = row.find_all("td")
+            rows.append([cell.get_text(strip=True) for cell in cells])
+
+        # Create a DataFrame from the table data
+        if headers and rows:
+            df = pd.DataFrame(rows, columns=headers)
+
+            # Check if there's a 'relevance score' column and sort it by default
+            for header in headers:
+                if header.lower().startswith('relevance score'):
+                    df = df.sort_values(by=header, ascending=False)
+                    break
+
+            # Replace the original table with the sorted one
+            new_html = df.to_html(index=False, escape=False)
+            new_table = BeautifulSoup(new_html, "html.parser")
+            table.replace_with(new_table)
+
     # Add JavaScript to make tables sortable
     script = """
     <script>
@@ -22,21 +45,6 @@ if html_code:
             table.querySelectorAll('th').forEach(function(header, index) {
                 header.style.cursor = 'pointer';
                 header.innerHTML += ' \u21D5';  // Add sort icon
-                
-                // Check if the header starts with 'relevance score' (case insensitive)
-                if (header.innerText.trim().toLowerCase().startsWith('relevance score')) {
-                    header.dataset.sortOrder = 'desc';  // Default sorting order for relevance score is descending
-                    // Trigger sorting by default
-                    var rows = Array.from(table.querySelectorAll('tr')).slice(1); // Exclude header row
-                    rows.sort(function(rowA, rowB) {
-                        var cellA = rowA.children[index].innerText.toLowerCase();
-                        var cellB = rowB.children[index].innerText.toLowerCase();
-                        return cellB.localeCompare(cellA);
-                    });
-                    rows.forEach(function(row) {
-                        table.appendChild(row);
-                    });
-                }
                 
                 header.addEventListener('click', function() {
                     var rows = Array.from(table.querySelectorAll('tr')).slice(1); // Exclude header row
