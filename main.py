@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from bs4 import BeautifulSoup
 import pandas as pd
 import io
@@ -12,21 +11,15 @@ html_code = st.text_area("Enter HTML Code:", height=300)
 
 # Display the HTML code if the user has entered it
 if html_code:
-    st.subheader("Rendered HTML Output:")
-    components.html(html_code, height=400)
-
     # Analyze the HTML code for tables
     soup = BeautifulSoup(html_code, "html.parser")
     tables = soup.find_all("table")
 
     if tables:
-        st.subheader("Extracted Tables:")
         sorted_tables_html = ""
         for idx, table in enumerate(tables):
             # Convert HTML table to DataFrame
             df = pd.read_html(str(table))[0]
-            st.write(f"Table {idx + 1}:")
-            st.dataframe(df)  # Display table as a sortable dataframe
 
             # Convert DataFrame back to HTML
             table_html = df.to_html(index=False)
@@ -40,7 +33,6 @@ if html_code:
 st.markdown("""
     ### Instructions:
     - Enter your HTML code in the text area above.
-    - The rendered output will be displayed below.
     - If there are tables in the HTML code, they will be extracted and displayed as sortable tables.
     - The generated HTML code for the tables will also be available for copying.
     
