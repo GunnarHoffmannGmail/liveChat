@@ -27,8 +27,8 @@ if html_code:
                     var isAscending = header.dataset.sortOrder !== 'asc';
                     header.dataset.sortOrder = isAscending ? 'asc' : 'desc';
                     rows.sort(function(rowA, rowB) {
-                        var cellA = rowA.children[index].innerText;
-                        var cellB = rowB.children[index].innerText;
+                        var cellA = rowA.children[index].innerText.toLowerCase();
+                        var cellB = rowB.children[index].innerText.toLowerCase();
                         return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
                     });
                     rows.forEach(function(row) {
