@@ -19,7 +19,11 @@ if html_code:
         rows = []
         for row in table.find_all("tr")[1:]:  # Skip the header row
             cells = row.find_all("td")
-            rows.append([cell.get_text(strip=True) for cell in cells])
+            row_data = []
+            for cell in cells:
+                # Preserve HTML content such as links and images
+                row_data.append(str(cell))
+            rows.append(row_data)
 
         # Create a DataFrame from the table data
         if headers and rows:
