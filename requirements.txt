@@ -3,5 +3,5 @@ streamlit-webrtc
 google-cloud-speech
 numpy
 opencv-python-headless
-whisper
+openai-whisper
 av
