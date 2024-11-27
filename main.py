@@ -25,13 +25,13 @@ if html_code:
                 
                 // Check if the header starts with 'relevance score' (case insensitive)
                 if (header.innerText.trim().toLowerCase().startsWith('relevance score')) {
-                    header.dataset.sortOrder = 'asc';  // Default sorting order for relevance score is ascending
+                    header.dataset.sortOrder = 'desc';  // Default sorting order for relevance score is descending
                     // Trigger sorting by default
                     var rows = Array.from(table.querySelectorAll('tr')).slice(1); // Exclude header row
                     rows.sort(function(rowA, rowB) {
                         var cellA = rowA.children[index].innerText.toLowerCase();
                         var cellB = rowB.children[index].innerText.toLowerCase();
-                        return cellA.localeCompare(cellB);
+                        return cellB.localeCompare(cellA);
                     });
                     rows.forEach(function(row) {
                         table.appendChild(row);
