@@ -42,7 +42,12 @@ if html_code:
 
     # Display the HTML code with sorted tables in a text area
     st.subheader("HTML Code with Sorted Tables:")
-    st.text_area("Generated HTML Code:", value=str(soup), height=300)
+    generated_html = str(soup)
+    st.text_area("Generated HTML Code:", value=generated_html, height=300)
+
+    # Display an HTML preview
+    st.subheader("HTML Preview:")
+    st.components.v1.html(generated_html, height=400)
 
 # Add some instructions or examples
 st.markdown("""
