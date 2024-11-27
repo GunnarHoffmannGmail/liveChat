@@ -45,9 +45,9 @@ if html_code:
     generated_html = str(soup)
     st.text_area("Generated HTML Code:", value=generated_html, height=300)
 
-    # Display an HTML preview
+    # Display an HTML preview with full output and scrolling enabled
     st.subheader("HTML Preview:")
-    st.components.v1.html(generated_html, height=400)
+    st.components.v1.html(generated_html, height=600, scrolling=True)
 
 # Add some instructions or examples
 st.markdown("""
