@@ -21,6 +21,7 @@ if html_code:
         tables.forEach(function(table) {
             table.querySelectorAll('th').forEach(function(header, index) {
                 header.style.cursor = 'pointer';
+                header.innerHTML += ' \u21D5';  // Add sort icon
                 header.addEventListener('click', function() {
                     var rows = Array.from(table.querySelectorAll('tr:nth-child(n+2)'));
                     var isAscending = header.dataset.sortOrder !== 'asc';
@@ -52,6 +53,7 @@ st.markdown("""
     ### Instructions:
     - Enter your HTML code in the text area above.
     - If there are tables in the HTML code, they will be made sortable by clicking the table headers.
+    - A sort icon (⇕) will be added to indicate that the table headers are sortable.
     - The generated HTML code with sortable tables will also be available for copying.
     
     Example:
