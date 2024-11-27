@@ -1,7 +1,5 @@
 import streamlit as st
 from bs4 import BeautifulSoup
-import pandas as pd
-import io
 
 # Streamlit app title
 st.title("HTML Code Input App")
@@ -15,26 +13,46 @@ if html_code:
     soup = BeautifulSoup(html_code, "html.parser")
     tables = soup.find_all("table")
 
-    if tables:
-        sorted_tables_html = ""
-        for idx, table in enumerate(tables):
-            # Convert HTML table to DataFrame
-            df = pd.read_html(str(table))[0]
+    # Add JavaScript to make tables sortable
+    script = """
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tables = document.querySelectorAll('table');
+        tables.forEach(function(table) {
+            table.querySelectorAll('th').forEach(function(header, index) {
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', function() {
+                    var rows = Array.from(table.querySelectorAll('tr:nth-child(n+2)'));
+                    var isAscending = header.dataset.sortOrder !== 'asc';
+                    header.dataset.sortOrder = isAscending ? 'asc' : 'desc';
+                    rows.sort(function(rowA, rowB) {
+                        var cellA = rowA.children[index].innerText;
+                        var cellB = rowB.children[index].innerText;
+                        return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                    });
+                    rows.forEach(function(row) {
+                        table.appendChild(row);
+                    });
+                });
+            });
+        });
+    });
+    </script>
+    """
 
-            # Convert DataFrame back to HTML
-            table_html = df.to_html(index=False)
-            sorted_tables_html += table_html + "\n"
+    # Inject the JavaScript into the HTML
+    soup.body.append(BeautifulSoup(script, "html.parser"))
 
-        # Display the HTML code with sortable tables in a text area
-        st.subheader("HTML Code with Sortable Tables:")
-        st.text_area("Generated HTML Code:", value=sorted_tables_html, height=300)
+    # Display the HTML code with sortable tables in a text area
+    st.subheader("HTML Code with Sortable Tables:")
+    st.text_area("Generated HTML Code:", value=str(soup), height=300)
 
 # Add some instructions or examples
 st.markdown("""
     ### Instructions:
     - Enter your HTML code in the text area above.
-    - If there are tables in the HTML code, they will be extracted and displayed as sortable tables.
-    - The generated HTML code for the tables will also be available for copying.
+    - If there are tables in the HTML code, they will be made sortable by clicking the table headers.
+    - The generated HTML code with sortable tables will also be available for copying.
     
     Example:
     ```html
