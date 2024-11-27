@@ -23,7 +23,7 @@ if html_code:
                 header.style.cursor = 'pointer';
                 header.innerHTML += ' \u21D5';  // Add sort icon
                 header.addEventListener('click', function() {
-                    var rows = Array.from(table.querySelectorAll('tr:nth-child(n+1):not(:first-child)')); // Start from second row to exclude header
+                    var rows = Array.from(table.querySelectorAll('tr')).slice(1);    // Start from second row to exclude header
                     var isAscending = header.dataset.sortOrder !== 'asc';
                     header.dataset.sortOrder = isAscending ? 'asc' : 'desc';
                     rows.sort(function(rowA, rowB) {
