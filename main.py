@@ -23,8 +23,8 @@ if html_code:
                 header.style.cursor = 'pointer';
                 header.innerHTML += ' \u21D5';  // Add sort icon
                 
-                // Check if the header is 'relevance score' (case insensitive)
-                if (header.innerText.trim().toLowerCase() === 'relevance score') {
+                // Check if the header starts with 'relevance score' (case insensitive)
+                if (header.innerText.trim().toLowerCase().startsWith('relevance score')) {
                     header.dataset.sortOrder = 'asc';  // Default sorting order for relevance score is ascending
                 }
                 
