@@ -1,63 +1,56 @@
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
-import numpy as np
-import whisper
-import av
-import queue
-import threading
+import streamlit.components.v1 as components
+from bs4 import BeautifulSoup
+import pandas as pd
+import io
 
-# Configure WebRTC Client Settings
-RTC_CLIENT_SETTINGS = ClientSettings(
-    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-    media_stream_constraints={"audio": True, "video": False},
-)
+# Streamlit app title
+st.title("HTML Code Input App")
 
-# Queue for audio frames
-audio_queue = queue.Queue()
+# HTML input from the user
+html_code = st.text_area("Enter HTML Code:", height=300)
 
-# Whisper model initialization
-model = whisper.load_model("base")  # Choose "base", "small", "medium", or "large" for accuracy/performance tradeoff
+# Display the HTML code if the user has entered it
+if html_code:
+    st.subheader("Rendered HTML Output:")
+    components.html(html_code, height=400)
 
-# Audio processing callback
-def audio_callback(frame: av.AudioFrame):
-    audio_data = frame.to_ndarray().flatten().astype(np.float32) / 32768.0  # Normalize 16-bit PCM data
-    audio_queue.put(audio_data)
-    return frame
+    # Analyze the HTML code for tables
+    soup = BeautifulSoup(html_code, "html.parser")
+    tables = soup.find_all("table")
 
-# Function to transcribe audio using Whisper
-def transcribe_audio():
-    while True:
-        if not audio_queue.empty():
-            audio_buffer = []
-            while not audio_queue.empty():
-                audio_buffer.extend(audio_queue.get())
+    if tables:
+        st.subheader("Extracted Tables:")
+        sorted_tables_html = ""
+        for idx, table in enumerate(tables):
+            # Convert HTML table to DataFrame
+            df = pd.read_html(str(table))[0]
+            st.write(f"Table {idx + 1}:")
+            st.dataframe(df)  # Display table as a sortable dataframe
 
-            # Convert audio buffer to numpy array
-            audio_np = np.array(audio_buffer, dtype=np.float32)
+            # Convert DataFrame back to HTML
+            table_html = df.to_html(index=False)
+            sorted_tables_html += table_html + "\n"
 
-            # Transcribe using Whisper
-            try:
-                result = model.transcribe(audio_np, fp16=False)
-                st.session_state.transcription = result["text"]
-            except Exception as e:
-                st.session_state.transcription = f"Error: {e}"
+        # Display the HTML code with sortable tables in a text area
+        st.subheader("HTML Code with Sortable Tables:")
+        st.text_area("Generated HTML Code:", value=sorted_tables_html, height=300)
 
-# Streamlit app
-st.title("Real-Time Audio Transcription with Whisper and Streamlit WebRTC")
-
-# WebRTC Streamer
-webrtc_ctx = webrtc_streamer(
-    key="speech-to-text",
-    mode=WebRtcMode.SENDRECV,
-    client_settings=RTC_CLIENT_SETTINGS,
-    audio_frame_callback=audio_callback,
-)
-
-# Start transcription in a background thread
-if "transcription" not in st.session_state:
-    st.session_state.transcription = ""
-    threading.Thread(target=transcribe_audio, daemon=True).start()
-
-# Display transcription
-st.text_area("Real-Time Transcription:", value=st.session_state.transcription, height=200)
-
+# Add some instructions or examples
+st.markdown("""
+    ### Instructions:
+    - Enter your HTML code in the text area above.
+    - The rendered output will be displayed below.
+    - If there are tables in the HTML code, they will be extracted and displayed as sortable tables.
+    - The generated HTML code for the tables will also be available for copying.
+    
+    Example:
+    ```html
+    <h1>Hello, Streamlit!</h1>
+    <p>This is a paragraph of HTML code.</p>
+    <table>
+        <tr><th>Header 1</th><th>Header 2</th></tr>
+        <tr><td>Data 1</td><td>Data 2</td></tr>
+    </table>
+    ```
+""")
