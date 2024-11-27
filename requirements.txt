@@ -1,7 +1,3 @@
 streamlit
-streamlit-webrtc
-google-cloud-speech
-numpy
-opencv-python-headless
-openai-whisper
-av
+beautifulsoup4
+pandas
