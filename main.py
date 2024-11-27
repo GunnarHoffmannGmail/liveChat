@@ -22,7 +22,7 @@ if html_code:
             row_data = []
             for cell in cells:
                 # Preserve HTML content such as links and images
-                row_data.append(cell.decode_contents())
+                row_data.append(str(cell))
             rows.append(row_data)
 
         # Create a DataFrame from the table data
@@ -38,8 +38,7 @@ if html_code:
             # Replace the original table with the sorted one
             new_html = df.to_html(index=False, escape=False)
             new_table = BeautifulSoup(new_html, "html.parser")
-            for original, new in zip(table.find_all("td"), new_table.find_all("td")):
-                original.replace_with(BeautifulSoup(new.encode_contents(), "html.parser"))
+            table.replace_with(new_table)
 
     # Display the HTML code with sorted tables in a text area
     st.subheader("HTML Code with Sorted Tables:")
