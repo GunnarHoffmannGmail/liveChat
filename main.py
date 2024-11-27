@@ -22,8 +22,14 @@ if html_code:
             table.querySelectorAll('th').forEach(function(header, index) {
                 header.style.cursor = 'pointer';
                 header.innerHTML += ' \u21D5';  // Add sort icon
+                
+                // Check if the header is 'relevance score' (case insensitive)
+                if (header.innerText.trim().toLowerCase() === 'relevance score') {
+                    header.dataset.sortOrder = 'asc';  // Default sorting order for relevance score is ascending
+                }
+                
                 header.addEventListener('click', function() {
-                    var rows = Array.from(table.querySelectorAll('tr')).slice(1);    // Start from second row to exclude header
+                    var rows = Array.from(table.querySelectorAll('tr')).slice(1); // Exclude header row
                     var isAscending = header.dataset.sortOrder !== 'asc';
                     header.dataset.sortOrder = isAscending ? 'asc' : 'desc';
                     rows.sort(function(rowA, rowB) {
